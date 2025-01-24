@@ -1,101 +1,103 @@
+"use client";
+
+import { motion } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="min-h-screen bg-white">
+      {/* 상단 장식 요소 */}
+      <div className="absolute top-0 right-0 w-1/3 h-screen bg-gradient-to-b from-blue-900/10 to-transparent -z-10" />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      <main className="container mx-auto px-4 py-20">
+        {/* 히어로 섹션 */}
+        <section className="flex flex-col items-center text-center mb-32">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="mb-8"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+              함께 나누는 <span className="text-blue-900">근로자의 이야기</span>
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              AI 챗봇으로 상담하고, 다른 근로자들과 경험을 공유하세요
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="flex flex-col sm:flex-row gap-4"
           >
-            Read our docs
-          </a>
-        </div>
+            <Link href="/login">
+              <button className="px-8 py-4 bg-blue-900 text-white rounded-full hover:bg-blue-800 transition-colors shadow-lg hover:shadow-xl">
+                커뮤니티 둘러보기
+              </button>
+            </Link>
+            <Link href="/login">
+              <button className="px-8 py-4 border-2 border-blue-900 text-blue-900 rounded-full hover:bg-blue-50 transition-colors">
+                AI 상담 시작하기
+              </button>
+            </Link>
+          </motion.div>
+        </section>
+
+        {/* 특징 섹션 */}
+        <section className="grid md:grid-cols-3 gap-8 mb-32">
+          {[
+            {
+              title: "실시간 커뮤니티",
+              description: "다른 근로자들의 경험과 해결책을 함께 나눠보세요",
+              icon: "👥",
+            },
+            {
+              title: "AI 법률 상담",
+              description:
+                "상담 내용을 커뮤니티에 공유하고 다양한 의견을 들어보세요",
+              icon: "💬",
+            },
+            {
+              title: "다국어 지원",
+              description: "한국어, 영어, 중국어로 자유롭게 소통하세요",
+              icon: "🌏",
+            },
+          ].map((feature, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 * index }}
+              className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow"
+            >
+              <div className="text-4xl mb-4">{feature.icon}</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {feature.title}
+              </h3>
+              <p className="text-gray-600">{feature.description}</p>
+            </motion.div>
+          ))}
+        </section>
+
+        {/* CTA 섹션 */}
+        <motion.section
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="bg-gradient-to-r from-blue-900 to-rose-400 p-12 rounded-3xl text-center text-white"
+        >
+          <h2 className="text-3xl font-bold mb-4">함께 이야기를 나눠보세요</h2>
+          <p className="mb-8 text-lg opacity-90">
+            혼자만의 고민이 아닌, 모두의 경험이 될 수 있습니다
+          </p>
+          <button className="px-8 py-4 bg-white text-blue-900 rounded-full font-bold hover:bg-blue-50 transition-colors">
+            커뮤니티 참여하기
+          </button>
+        </motion.section>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
