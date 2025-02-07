@@ -3,8 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useMutation } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+
+interface PasswordUpdateRequest {
+  currentPassword: string;
+  newPassword: string;
+}
 
 export default function SettingsPage() {
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -12,6 +25,44 @@ export default function SettingsPage() {
   });
 
   const [language, setLanguage] = useState("ko");
+
+  const updatePasswordMutation = useMutation({
+    mutationFn: async (data: PasswordUpdateRequest) => {
+      const response = await api.put("/v1/user/member/setting", data);
+      return response.data;
+    },
+    onSuccess: () => {
+      alert("비밀번호가 변경되었습니다.");
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    },
+    onError: (error: any) => {
+      console.error("비밀번호 변경 실패:", error);
+      alert(error.response?.data?.message || "비밀번호 변경에 실패했습니다.");
+    },
+  });
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      alert("새 비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
+    console.log("비밀번호 변경 요청:", {
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    });
+
+    updatePasswordMutation.mutate({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,7 +83,7 @@ export default function SettingsPage() {
               <h2 className="text-lg font-medium text-slate-900 mb-4">
                 비밀번호 변경
               </h2>
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={handlePasswordSubmit}>
                 <div>
                   <label
                     htmlFor="current-password"
@@ -43,6 +94,13 @@ export default function SettingsPage() {
                   <input
                     type="password"
                     id="current-password"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) =>
+                      setPasswordForm({
+                        ...passwordForm,
+                        currentPassword: e.target.value,
+                      })
+                    }
                     className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
                       text-slate-900 placeholder:text-slate-400"
                   />
@@ -57,6 +115,13 @@ export default function SettingsPage() {
                   <input
                     type="password"
                     id="new-password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) =>
+                      setPasswordForm({
+                        ...passwordForm,
+                        newPassword: e.target.value,
+                      })
+                    }
                     className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
                       text-slate-900 placeholder:text-slate-400"
                   />
@@ -71,6 +136,13 @@ export default function SettingsPage() {
                   <input
                     type="password"
                     id="confirm-password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordForm({
+                        ...passwordForm,
+                        confirmPassword: e.target.value,
+                      })
+                    }
                     className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
                       text-slate-900 placeholder:text-slate-400"
                   />

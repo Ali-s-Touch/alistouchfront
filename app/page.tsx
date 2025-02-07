@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
 import Link from "next/link";
 
 export default function Home() {
@@ -19,11 +18,14 @@ export default function Home() {
             transition={{ duration: 0.8 }}
             className="mb-8"
           >
+            <div className="flex justify-center mb-12">
+              <img src="/logo.png" alt="알리의 손길" className="h-80" />
+            </div>
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              함께 나누는 <span className="text-blue-900">근로자의 이야기</span>
+              함께 나누는 <span className="text-blue-900">알리의 손길</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              AI 챗봇으로 상담하고, 다른 근로자들과 경험을 공유하세요
+              외국인 근로자를 위한 AI 상담과 커뮤니티 플랫폼
             </p>
           </motion.div>
 
@@ -56,13 +58,12 @@ export default function Home() {
             },
             {
               title: "AI 법률 상담",
-              description:
-                "상담 내용을 커뮤니티에 공유하고 다양한 의견을 들어보세요",
+              description: "24시간 언제든 무료로 법률 상담을 받아보세요",
               icon: "💬",
             },
             {
               title: "다국어 지원",
-              description: "한국어, 영어, 중국어로 자유롭게 소통하세요",
+              description: "모국어로 편하게 상담받고 소통하세요",
               icon: "🌏",
             },
           ].map((feature, index) => (
@@ -87,15 +88,17 @@ export default function Home() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="bg-gradient-to-r from-blue-900 to-rose-400 p-12 rounded-3xl text-center text-white"
+          className="bg-gradient-to-r from-blue-900 to-blue-700 p-12 rounded-3xl text-center text-white"
         >
           <h2 className="text-3xl font-bold mb-4">함께 이야기를 나눠보세요</h2>
           <p className="mb-8 text-lg opacity-90">
             혼자만의 고민이 아닌, 모두의 경험이 될 수 있습니다
           </p>
-          <button className="px-8 py-4 bg-white text-blue-900 rounded-full font-bold hover:bg-blue-50 transition-colors">
-            커뮤니티 참여하기
-          </button>
+          <Link href="/login">
+            <button className="px-8 py-4 bg-white text-blue-900 rounded-full font-bold hover:bg-blue-50 transition-colors">
+              지금 시작하기
+            </button>
+          </Link>
         </motion.section>
       </main>
     </div>

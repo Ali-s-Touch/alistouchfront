@@ -3,10 +3,38 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSelector, useDispatch } from "react-redux";
+import { useQuery } from "@tanstack/react-query";
+import type { RootState } from "@/store";
+import { logout, setUser } from "@/store/authSlice";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 
 export default function MainPage() {
+  const dispatch = useDispatch();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const user = useSelector((state: RootState) => state.auth.user);
+  const router = useRouter();
+
+  // 프로필 정보 조회
+  useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const response = await api.get(
+        `/v1/user/member/profile?email=${user?.email}`
+      );
+      dispatch(
+        setUser({
+          email: response.data.email,
+          name: response.data.name,
+          nationality: response.data.memberNationality,
+        })
+      );
+      return response.data;
+    },
+    enabled: !user && !!localStorage.getItem("accessToken"), // 유저 정보가 없고 토큰이 있을 때만 실행
+  });
 
   const notifications = [
     {
@@ -31,6 +59,21 @@ export default function MainPage() {
       isNew: false,
     },
   ];
+
+  const handleLogout = () => {
+    // 로컬 스토리지에서 토큰 제거
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+
+    // API 헤더에서 토큰 제거
+    delete api.defaults.headers.common["Authorization"];
+
+    // Redux store에서 인증 정보 제거
+    dispatch(logout());
+
+    // 로그인 페이지로 리다이렉트
+    router.push("/login");
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -100,8 +143,8 @@ export default function MainPage() {
               {showProfileMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden animate-fade-in">
                   <div className="p-4 border-b border-slate-100">
-                    <p className="font-medium text-slate-900">김OO님</p>
-                    <p className="text-sm text-slate-500">worker@email.com</p>
+                    <p className="font-medium text-slate-900">{user?.name}님</p>
+                    <p className="text-sm text-slate-500">{user?.email}</p>
                   </div>
                   <div className="py-1">
                     <Link
@@ -124,10 +167,8 @@ export default function MainPage() {
                       계정 설정
                     </Link>
                     <button
+                      onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-4 py-2 text-sm text-rose-600 hover:bg-slate-50 transition-colors"
-                      onClick={() => {
-                        /* 로그아웃 처리 */
-                      }}
                     >
                       <Image src="/logout.svg" alt="" width={16} height={16} />
                       로그아웃
