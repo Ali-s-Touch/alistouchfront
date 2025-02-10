@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌟 AliStory
 
-## Getting Started
+외국인 근로자를 위한 AI 기반 법률 상담 플랫폼
 
-First, run the development server:
+## 🚀 주요 기능
+
+### 1. AI 법률 상담
+
+- 실시간 AI 챗봇을 통한 법률 상담
+- 다국어 지원으로 언어 장벽 해소
+- 근로 관련 법률 문제 해결 지원
+
+### 2. 커뮤니티
+
+- 카테고리별 게시판 운영
+  - 취업 절차
+  - 노동법/권리
+  - 사업주 의무
+  - 체류/비자
+  - 고용 규정
+  - 일상생활
+- 실시간 알림 시스템
+- 댓글과 좋아요 기능
+
+### 3. 사용자 경험
+
+- 직관적인 UI/UX
+- 반응형 디자인
+- 무한 스크롤
+- 실시간 업데이트
+
+## 🛠 기술 스택
+
+### Frontend
+
+- Next.js 14 (App Router)
+- TypeScript
+- TailwindCSS
+- Tanstack Query
+- Redux Toolkit
+
+### 주요 라이브러리
+
+- `@tanstack/react-query`
+- `@reduxjs/toolkit`
+- `axios`
+- `next/navigation`
+- `react-intersection-observer`
+
+## 🔧 설치 및 실행
 
 ```bash
+
+# 의존성 설치
+npm install
+
+# 개발 서버 실행
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# 프로덕션 빌드
+npm run build
+
+# 프로덕션 서버 실행
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🌈 프로젝트 구조
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+app/
+├── board/          # 게시판 관련 페이지
+├── chat/           # AI 상담 관련 페이지
+├── login/          # 로그인/회원가입
+├── post/           # 게시글 상세
+├── profile/        # 프로필 관리
+├── search/         # 검색 기능
+└── main/           # 메인 페이지
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+components/         # 재사용 가능한 컴포넌트
+hooks/              # 커스텀 훅
+lib/                # 유틸리티 함수
+store/              # Redux 스토어
+```
 
-## Learn More
+## 📝 라이선스
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT License
