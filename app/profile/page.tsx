@@ -11,8 +11,7 @@ import type { RootState } from "@/store";
 
 interface ProfileUpdateRequest {
   name: string;
-  email: string;
-  memberNationality: string;
+  nationality: string;
 }
 
 export default function ProfilePage() {
@@ -23,8 +22,7 @@ export default function ProfilePage() {
   // user 정보가 있으면 그 값을 초기값으로 사용
   const [formData, setFormData] = useState<ProfileUpdateRequest>({
     name: user?.name || "",
-    email: user?.email || "",
-    memberNationality: user?.nationality || "VIETNAMESE",
+    nationality: user?.nationality || "VIETNAMESE",
   });
 
   // 프로필 정보 조회
@@ -39,7 +37,6 @@ export default function ProfilePage() {
       // Redux store와 form 데이터 모두 업데이트
       dispatch(
         setUser({
-          email: data.email,
           name: data.name,
           nationality: data.memberNationality,
         })
@@ -47,8 +44,7 @@ export default function ProfilePage() {
 
       setFormData({
         name: data.name,
-        email: data.email,
-        memberNationality: data.memberNationality,
+        nationality: data.memberNationality,
       });
 
       return data;
@@ -58,6 +54,7 @@ export default function ProfilePage() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileUpdateRequest) => {
+      console.log(data);
       const response = await api.put("/v1/user/member/profile", data);
       return response.data;
     },
@@ -161,24 +158,7 @@ export default function ProfilePage() {
                       text-slate-900 placeholder:text-slate-400"
                   />
                 </div>
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-slate-700 mb-1"
-                  >
-                    이메일
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                      text-slate-900 placeholder:text-slate-400"
-                  />
-                </div>
+
                 <div>
                   <label
                     htmlFor="nationality"
@@ -203,7 +183,7 @@ export default function ProfilePage() {
                     <option value="THAI">태국</option>
                     <option value="INDONESIAN">인도네시아</option>
                     <option value="MYANMAR">미얀마</option>
-                    <option value="KOREAN">한국</option>
+                    <option value="KOREA">한국</option>
                   </select>
                 </div>
               </div>

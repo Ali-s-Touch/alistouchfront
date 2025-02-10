@@ -10,6 +10,25 @@ import { logout, setUser } from "@/store/authSlice";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
+const BOARD_TYPES = {
+  EMPLOYMENT_PROCESS: "취업 절차",
+  LABOR_LAW_RIGHTS: "노동법/권리",
+  EMPLOYER_OBLIGATIONS: "사업주 의무",
+  IMMIGRATION_RESIDENCY: "체류/비자",
+  EMPLOYMENT_COMPLIANCE: "고용 규정",
+  DAILY_LIFE: "일상생활",
+} as const;
+
+const CATEGORY_MAPPING = {
+  salary: "LABOR_LAW_RIGHTS",
+  worktime: "LABOR_LAW_RIGHTS",
+  accident: "EMPLOYER_OBLIGATIONS",
+  contract: "EMPLOYMENT_COMPLIANCE",
+  visa: "IMMIGRATION_RESIDENCY",
+  info: "EMPLOYMENT_PROCESS",
+  daily: "DAILY_LIFE",
+} as const;
+
 export default function MainPage() {
   const dispatch = useDispatch();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -74,6 +93,65 @@ export default function MainPage() {
     // 로그인 페이지로 리다이렉트
     router.push("/login");
   };
+
+  const categories = [
+    {
+      id: "1",
+      category: "salary",
+      title: "임금 체불 상담",
+      desc: "3개월째 월급이 밀리고 있습니다",
+      isNew: true,
+      boardType: CATEGORY_MAPPING.salary,
+    },
+    {
+      id: "2",
+      category: "worktime",
+      title: "근무 환경",
+      desc: "야간 근무 수당 문의드립니다",
+      isNew: true,
+      boardType: CATEGORY_MAPPING.worktime,
+    },
+    {
+      id: "3",
+      category: "accident",
+      title: "산업 재해",
+      desc: "일하다 다쳤는데 보상을 못 받고 있어요",
+      isNew: true,
+      boardType: CATEGORY_MAPPING.accident,
+    },
+    {
+      id: "4",
+      category: "contract",
+      title: "계약 관련",
+      desc: "근로계약서 작성시 주의할 점",
+      isNew: true,
+      boardType: CATEGORY_MAPPING.contract,
+    },
+    {
+      id: "5",
+      category: "visa",
+      title: "체류 자격",
+      desc: "비자 연장 관련 질문있습니다",
+      isNew: true,
+      boardType: CATEGORY_MAPPING.visa,
+    },
+    {
+      id: "6",
+      category: "info",
+      title: "정보 공유",
+      desc: "📌 무료 한국어 교육 정보",
+      isNew: true,
+      boardType: CATEGORY_MAPPING.info,
+    },
+    {
+      id: "7",
+      category: "daily",
+      title: "일상 이야기",
+      desc: "한국에서 처음으로 설날을 보내며",
+      isNew: true,
+      boardType: CATEGORY_MAPPING.daily,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -291,60 +369,12 @@ export default function MainPage() {
               </Link>
             </div>
             <div className="space-y-4">
-              {[
-                {
-                  id: "1",
-                  category: "salary",
-                  title: "임금 체불 상담",
-                  desc: "3개월째 월급이 밀리고 있습니다",
-                  isNew: true,
-                },
-                {
-                  id: "2",
-                  category: "worktime",
-                  title: "근무 환경",
-                  desc: "야간 근무 수당 문의드립니다",
-                  isNew: true,
-                },
-                {
-                  id: "3",
-                  category: "accident",
-                  title: "산업 재해",
-                  desc: "일하다 다쳤는데 보상을 못 받고 있어요",
-                  isNew: true,
-                },
-                {
-                  id: "4",
-                  category: "contract",
-                  title: "계약 관련",
-                  desc: "근로계약서 작성시 주의할 점",
-                  isNew: true,
-                },
-                {
-                  id: "5",
-                  category: "visa",
-                  title: "체류 자격",
-                  desc: "비자 연장 관련 질문있습니다",
-                  isNew: true,
-                },
-                {
-                  id: "6",
-                  category: "info",
-                  title: "정보 공유",
-                  desc: "📌 무료 한국어 교육 정보",
-                  isNew: true,
-                },
-                {
-                  id: "7",
-                  category: "daily",
-                  title: "일상 이야기",
-                  desc: "한국에서 처음으로 설날을 보내며",
-                  isNew: true,
-                },
-              ].map((item, index) => (
+              {categories.map((item, index) => (
                 <Link
                   key={index}
-                  href={`/chat/${item.category}/${item.id}`}
+                  href={`/board/${item.boardType.toLowerCase()}?category=${
+                    item.category
+                  }`}
                   className="flex items-center justify-between py-2 hover:bg-slate-50 rounded-lg transition-colors px-2
                     animate-fade-in-up opacity-0"
                   style={{ animationDelay: `${index * 0.05 + 0.3}s` }}

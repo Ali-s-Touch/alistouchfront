@@ -12,7 +12,7 @@ import { useDispatch } from "react-redux";
 import { setToken } from "@/store/authSlice";
 
 const nationalityOptions = [
-  { value: "KOREAN", label: "한국" },
+  { value: "KOREA", label: "한국" },
   { value: "VIETNAMESE", label: "베트남" },
   { value: "FILIPINO", label: "필리핀" },
   { value: "THAI", label: "태국" },
