@@ -4,7 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSelector, useDispatch } from "react-redux";
-import { useQuery } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  useInfiniteQuery,
+  useMutation,
+} from "@tanstack/react-query";
 import type { RootState } from "@/store";
 import { logout, setUser } from "@/store/authSlice";
 import { useRouter } from "next/navigation";
@@ -29,12 +34,22 @@ const CATEGORY_MAPPING = {
   daily: "DAILY_LIFE",
 } as const;
 
+interface Notification {
+  notificationId: number;
+  type: "COMMENT" | string; // 다른 타입이 있다면 추가
+  message: string;
+  isRead: boolean;
+  targetId: number;
+  createdDate: string;
+}
+
 export default function MainPage() {
   const dispatch = useDispatch();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // 프로필 정보 조회
   useQuery({
@@ -55,29 +70,61 @@ export default function MainPage() {
     enabled: !user && !!localStorage.getItem("accessToken"), // 유저 정보가 없고 토큰이 있을 때만 실행
   });
 
-  const notifications = [
-    {
-      id: 1,
-      title: "새로운 답변이 달렸습니다",
-      desc: "임금 체불 관련 상담에 새로운 답변이 있습니다.",
-      time: "방금 전",
-      isNew: true,
+  // 알림 목록 조회
+  const {
+    data: notificationsData,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["notifications"],
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await api.get("/v1/notification", {
+        params: {
+          page: pageParam,
+          size: 10,
+        },
+      });
+      return response.data;
     },
-    {
-      id: 2,
-      title: "상담이 완료되었습니다",
-      desc: "근로시간 관련 상담이 완료되었습니다.",
-      time: "1시간 전",
-      isNew: true,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.last) return undefined;
+      return lastPage.number + 1;
     },
-    {
-      id: 3,
-      title: "환영합니다!",
-      desc: "AliStory에 가입하신 것을 환영합니다.",
-      time: "1일 전",
-      isNew: false,
+    initialPageParam: 0,
+  });
+
+  // 전체 읽음 처리
+  const readAllMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.get("/v1/notification/read-all");
+      return response.data;
     },
-  ];
+    onSuccess: () => {
+      // 알림 목록 갱신
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      // 알림 팝업 닫기
+      setShowNotifications(false);
+    },
+  });
+
+  // 읽지 않은 알림이 있는지 확인
+  const hasUnreadNotifications = notificationsData?.pages.some((page) =>
+    page.content.some((notification: Notification) => !notification.isRead)
+  );
+
+  // 단일 알림 읽음 처리 mutation 추가
+  const readNotificationMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      const response = await api.get(
+        `/v1/notification/read?notificationId=${notificationId}`
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      // 알림 목록 갱신
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
 
   const handleLogout = () => {
     // 로컬 스토리지에서 토큰 제거
@@ -92,6 +139,19 @@ export default function MainPage() {
 
     // 로그인 페이지로 리다이렉트
     router.push("/login");
+  };
+
+  const handleNotificationClick = async (notification: Notification) => {
+    // 읽음 처리
+    await readNotificationMutation.mutateAsync(notification.notificationId);
+
+    // 해당 게시글로 이동
+    if (notification.type === "COMMENT") {
+      router.push(`/post/${notification.targetId}`);
+    }
+
+    // 알림 팝업 닫기
+    setShowNotifications(false);
   };
 
   const categories = [
@@ -155,8 +215,8 @@ export default function MainPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm fixed w-full top-0 z-50 animate-fade-in">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+      <nav className="bg-white shadow-sm fixed w-full top-0 z-50">
+        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image src="/logo.svg" alt="로고" width={32} height={32} />
             <Link href="/main" className="text-xl font-bold text-slate-900">
@@ -164,52 +224,84 @@ export default function MainPage() {
             </Link>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href="/search"
+              className="p-2 hover:bg-slate-50 rounded-full transition-colors"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="text-slate-600"
+              >
+                <path
+                  d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
             <div className="relative">
               <button
                 className="w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center transition-colors relative"
                 onClick={() => setShowNotifications(!showNotifications)}
               >
-                {notifications.some((n) => n.isNew) && (
+                {hasUnreadNotifications && (
                   <div className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full"></div>
                 )}
                 <Image src="/bell.svg" alt="알림" width={24} height={24} />
               </button>
 
-              {/* 알림 리스트 */}
               {showNotifications && (
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden animate-fade-in">
-                  <div className="p-4 border-b border-slate-100">
+                  <div className="p-4 border-b border-slate-100 flex justify-between items-center">
                     <h3 className="font-medium text-slate-900">알림</h3>
+                    <button
+                      onClick={() => readAllMutation.mutate()}
+                      className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      전체 읽음
+                    </button>
                   </div>
                   <div className="max-h-[400px] overflow-y-auto">
-                    {notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className="p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <h4 className="font-medium text-slate-900 mb-1">
-                              {notification.title}
-                            </h4>
-                            <p className="text-sm text-slate-600">
-                              {notification.desc}
-                            </p>
+                    {notificationsData?.pages.map((page) =>
+                      page.content.map((notification: Notification) => (
+                        <div
+                          key={notification.notificationId}
+                          onClick={() => handleNotificationClick(notification)}
+                          className="p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h4 className="font-medium text-slate-900 mb-1">
+                                {notification.type === "COMMENT"
+                                  ? "새로운 댓글"
+                                  : notification.type}
+                              </h4>
+                              <p className="text-sm text-slate-600">
+                                {notification.message}
+                              </p>
+                            </div>
+                            {!notification.isRead && (
+                              <span className="flex-shrink-0 w-2 h-2 mt-2 bg-rose-500 rounded-full"></span>
+                            )}
                           </div>
-                          {notification.isNew && (
-                            <span className="flex-shrink-0 w-2 h-2 mt-2 bg-rose-500 rounded-full"></span>
-                          )}
+                          <span className="text-xs text-slate-500 mt-2 block">
+                            {new Date(
+                              notification.createdDate
+                            ).toLocaleDateString()}
+                          </span>
                         </div>
-                        <span className="text-xs text-slate-500 mt-2 block">
-                          {notification.time}
-                        </span>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               )}
             </div>
-            {/* 프로필 메뉴 */}
             <div className="relative">
               <button
                 className="w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center transition-colors"

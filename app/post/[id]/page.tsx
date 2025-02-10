@@ -5,8 +5,10 @@ import { api } from "@/lib/api";
 import Link from "next/link";
 import Image from "next/image";
 import { use } from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 interface ChatItem {
   sequenceId: number;
@@ -26,6 +28,7 @@ interface Post {
   boardType: string;
   viewCount: number;
   likeCount: number;
+  isLiked: boolean;
 }
 
 interface Comment {
@@ -36,6 +39,7 @@ interface Comment {
   writerNationality: string;
   writeDate: string;
   likeCount: number;
+  isLiked: boolean;
 }
 
 export default function PostDetailPage({
@@ -45,6 +49,8 @@ export default function PostDetailPage({
 }) {
   const resolvedParams = use(params);
   const [commentText, setCommentText] = useState("");
+  const queryClient = useQueryClient();
+  const { ref, inView } = useInView();
 
   const { data: post, isLoading: isPostLoading } = useQuery({
     queryKey: ["post", resolvedParams.id],
@@ -54,21 +60,38 @@ export default function PostDetailPage({
     },
   });
 
-  const { data: comments, isLoading: isCommentsLoading } = useQuery({
+  // 댓글 무한 스크롤 쿼리
+  const {
+    data: commentsPages,
+    fetchNextPage,
+    hasNextPage,
+    isLoading: isCommentsLoading,
+  } = useInfiniteQuery({
     queryKey: ["comments", resolvedParams.id],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       const response = await api.get(`/v1/post-comment/list`, {
         params: {
           postId: resolvedParams.id,
-          page: 0,
+          page: pageParam,
           size: 10,
+          sort: "writeDate,desc",
         },
       });
       return response.data;
     },
+    getNextPageParam: (lastPage) => {
+      if (lastPage.last) return undefined;
+      return lastPage.number + 1;
+    },
+    initialPageParam: 0,
   });
 
-  const queryClient = useQueryClient();
+  // 무한 스크롤 감지
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
 
   // 댓글 작성 mutation
   const createComment = useMutation({
@@ -79,9 +102,12 @@ export default function PostDetailPage({
       return response.data;
     },
     onSuccess: () => {
-      // 댓글 작성 성공 시 댓글 목록 갱신
-      setCommentText(""); // 입력창 초기화
-      queryClient.invalidateQueries(["comments", resolvedParams.id]);
+      setCommentText("");
+      // 첫 페이지만 갱신
+      queryClient.invalidateQueries({
+        queryKey: ["comments", resolvedParams.id],
+        refetchPage: (page, index) => index === 0,
+      });
     },
     onError: (error) => {
       console.error("댓글 작성 실패:", error);
@@ -89,7 +115,129 @@ export default function PostDetailPage({
     },
   });
 
-  console.log(post);
+  // 좋아요 mutation
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post(`/v1/post/${resolvedParams.id}/like`);
+      return response.data;
+    },
+    onMutate: async () => {
+      // 이전 데이터 백업
+      const previousPost = queryClient.getQueryData<Post>([
+        "post",
+        resolvedParams.id,
+      ]);
+
+      // Optimistic update
+      if (previousPost) {
+        queryClient.setQueryData<Post>(["post", resolvedParams.id], {
+          ...previousPost,
+          likeCount: previousPost.isLiked
+            ? previousPost.likeCount - 1 // 좋아요 취소
+            : previousPost.likeCount + 1, // 좋아요 추가
+          isLiked: !previousPost.isLiked,
+        });
+      }
+
+      return { previousPost };
+    },
+    onSuccess: (data) => {
+      // 서버 응답으로 상태 업데이트
+      queryClient.setQueryData<Post>(["post", resolvedParams.id], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          likeCount: data.likeCount,
+          isLiked: data.isLiked,
+        };
+      });
+    },
+    onError: (err, variables, context) => {
+      // 에러 시 롤백
+      if (context?.previousPost) {
+        queryClient.setQueryData(
+          ["post", resolvedParams.id],
+          context.previousPost
+        );
+      }
+      alert("좋아요 실패");
+    },
+  });
+
+  // 댓글 좋아요 mutation
+  const commentLikeMutation = useMutation({
+    mutationFn: async (commentId: number) => {
+      const response = await api.post(`/v1/post-comment/${commentId}/like`);
+      return response.data;
+    },
+    onMutate: async (commentId) => {
+      // 이전 데이터 백업
+      const previousComments = queryClient.getQueryData<{
+        pages: Array<{
+          content: Comment[];
+        }>;
+      }>(["comments", resolvedParams.id]);
+
+      // Optimistic update
+      if (previousComments?.pages) {
+        queryClient.setQueryData(["comments", resolvedParams.id], {
+          ...previousComments,
+          pages: previousComments.pages.map((page) => ({
+            ...page,
+            content: page.content.map((comment) =>
+              comment.commentId === commentId
+                ? {
+                    ...comment,
+                    likeCount: comment.isLiked
+                      ? comment.likeCount - 1
+                      : comment.likeCount + 1,
+                    isLiked: !comment.isLiked,
+                  }
+                : comment
+            ),
+          })),
+        });
+      }
+
+      return { previousComments };
+    },
+    onSuccess: (data, commentId) => {
+      // 서버 응답으로 상태 업데이트
+      queryClient.setQueryData<{
+        pages: Array<{
+          content: Comment[];
+        }>;
+      }>(["comments", resolvedParams.id], (old) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            content: page.content.map((comment) =>
+              comment.commentId === commentId
+                ? {
+                    ...comment,
+                    likeCount: data.likeCount,
+                    isLiked: data.isLiked,
+                  }
+                : comment
+            ),
+          })),
+        };
+      });
+    },
+    onError: (err, commentId, context) => {
+      // 에러 시 롤백
+      if (context?.previousComments) {
+        queryClient.setQueryData(
+          ["comments", resolvedParams.id],
+          context.previousComments
+        );
+      }
+      alert("댓글 좋아요 실패");
+    },
+  });
+
   if (isPostLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -115,7 +263,14 @@ export default function PostDetailPage({
       </nav>
 
       <main className="pt-20 pb-20 max-w-3xl mx-auto px-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div
+          className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden
+          animate-fade-in-up opacity-0"
+          style={{
+            animationDelay: "0.1s",
+            animationFillMode: "forwards",
+          }}
+        >
           {/* 게시글 헤더 */}
           <div className="p-6 border-b border-slate-100">
             <div className="flex items-center gap-3 mb-4">
@@ -172,10 +327,17 @@ export default function PostDetailPage({
 
           {/* 채팅 내용 */}
           <div className="p-6 space-y-4">
-            {post.chatItems.map((chat: ChatItem) => (
+            {post.chatItems.map((chat: ChatItem, index) => (
               <div key={chat.sequenceId}>
                 {/* 질문 */}
-                <div className="flex justify-end items-start mb-4">
+                <div
+                  className="flex justify-end items-start mb-4
+                  animate-fade-in-up opacity-0"
+                  style={{
+                    animationDelay: `${index * 2 * 0.05 + 0.2}s`,
+                    animationFillMode: "forwards",
+                  }}
+                >
                   <div className="flex items-start gap-2">
                     <div className="max-w-[80%] p-4 rounded-xl bg-blue-900 text-white rounded-tr-none">
                       {chat.question}
@@ -187,7 +349,14 @@ export default function PostDetailPage({
                 </div>
 
                 {/* 답변 */}
-                <div className="flex justify-start items-start">
+                <div
+                  className="flex justify-start items-start
+                  animate-fade-in-up opacity-0"
+                  style={{
+                    animationDelay: `${index * 2 * 0.05 + 0.3}s`,
+                    animationFillMode: "forwards",
+                  }}
+                >
                   <div className="flex items-start gap-2">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-900 font-medium">
                       AI
@@ -202,7 +371,14 @@ export default function PostDetailPage({
           </div>
 
           {/* 하단 버튼 */}
-          <div className="p-6 border-t border-slate-100 flex justify-between">
+          <div
+            className="p-6 border-t border-slate-100 flex justify-between
+            animate-fade-in-up opacity-0"
+            style={{
+              animationDelay: "0.4s",
+              animationFillMode: "forwards",
+            }}
+          >
             <button className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
               <svg
                 width="20"
@@ -219,13 +395,19 @@ export default function PostDetailPage({
               </svg>
               댓글
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+            <button
+              onClick={() => likeMutation.mutate()}
+              disabled={likeMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <svg
                 width="20"
                 height="20"
                 viewBox="0 0 24 24"
-                fill="none"
+                fill={post.isLiked ? "currentColor" : "none"}
                 xmlns="http://www.w3.org/2000/svg"
+                className={post.isLiked ? "text-red-500" : "text-slate-600"}
               >
                 <path
                   d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
@@ -233,63 +415,98 @@ export default function PostDetailPage({
                   strokeWidth="1.5"
                 />
               </svg>
-              좋아요
+              {likeMutation.isPending ? "처리 중..." : "좋아요"}
+              <span className="ml-1">({post.likeCount})</span>
             </button>
           </div>
         </div>
 
         {/* 댓글 섹션 */}
-        <div className="mt-4 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div
+          className="mt-4 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden
+          animate-fade-in-up opacity-0"
+          style={{
+            animationDelay: "0.5s",
+            animationFillMode: "forwards",
+          }}
+        >
           <div className="p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4">
-              댓글 {comments?.totalElements || 0}개
+              댓글 {commentsPages?.pages[0]?.totalElements || 0}개
             </h2>
 
             {/* 댓글 목록 */}
             <div className="space-y-6">
-              {(comments?.content || []).map((comment: Comment) => (
-                <div key={comment.commentId} className="group">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-900 font-medium">
-                      {comment.writerName?.[0] || "익"}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-slate-900">
-                          {comment.writerName}
-                        </span>
-                        <span className="text-sm text-slate-500">
-                          {new Date(comment.writeDate).toLocaleDateString()}
-                        </span>
+              {commentsPages?.pages.map((page) =>
+                page.content.map((comment: Comment, index) => (
+                  <div
+                    key={comment.commentId}
+                    className="group animate-fade-in-up opacity-0"
+                    style={{
+                      animationDelay: `${index * 0.05 + 0.6}s`,
+                      animationFillMode: "forwards",
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-900 font-medium">
+                        {comment.writerName?.[0] || "익"}
                       </div>
-                      <p className="text-slate-600 whitespace-pre-wrap">
-                        {comment.content}
-                      </p>
-                      <div className="mt-2 flex items-center gap-4">
-                        <button className="flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600 transition-colors">
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-slate-900">
+                            {comment.writerName}
+                          </span>
+                          <span className="text-sm text-slate-500">
+                            {new Date(comment.writeDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-slate-600 whitespace-pre-wrap">
+                          {comment.content}
+                        </p>
+                        <div className="mt-2 flex items-center gap-4">
+                          <button
+                            onClick={() =>
+                              commentLikeMutation.mutate(comment.commentId)
+                            }
+                            disabled={commentLikeMutation.isPending}
+                            className="flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600 transition-colors
+                            disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <path
-                              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                            />
-                          </svg>
-                          {comment.likeCount}
-                        </button>
-                        <button className="text-sm text-slate-500 hover:text-blue-600 transition-colors">
-                          답글
-                        </button>
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill={comment.isLiked ? "currentColor" : "none"}
+                              xmlns="http://www.w3.org/2000/svg"
+                              className={
+                                comment.isLiked
+                                  ? "text-red-500"
+                                  : "text-slate-600"
+                              }
+                            >
+                              <path
+                                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                              />
+                            </svg>
+                            {comment.likeCount}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
+
+              {/* 로딩 인디케이터 */}
+              <div ref={ref} className="py-4 text-center">
+                {hasNextPage && (
+                  <div className="text-slate-500 text-sm animate-pulse">
+                    댓글 더 불러오는 중...
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 댓글 작성 */}
@@ -298,7 +515,8 @@ export default function PostDetailPage({
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="댓글을 입력하세요"
-                className="w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none
+                  text-slate-900 placeholder:text-slate-400 bg-white"
                 rows={3}
                 disabled={createComment.isPending}
               />
@@ -306,13 +524,14 @@ export default function PostDetailPage({
                 <button
                   onClick={() => {
                     if (!commentText.trim()) {
-                      alert("댓글 내용을 입력해주세요.");
+                      alert("댓글 내용을 입력하세요.");
                       return;
                     }
                     createComment.mutate();
                   }}
                   disabled={createComment.isPending || !commentText.trim()}
-                  className="px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors 
+                    disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {createComment.isPending ? "작성 중..." : "댓글 작성"}
                 </button>

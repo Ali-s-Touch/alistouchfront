@@ -1,11 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import Image from "next/image";
-import { use } from "react";
+import { use, useEffect } from "react";
+import { useInView } from "react-intersection-observer";
 
 const BOARD_TYPES = {
   EMPLOYMENT_PROCESS: "취업 절차",
@@ -44,21 +45,39 @@ export default function BoardPage({
   const resolvedParams = use(params);
   const searchParams = useSearchParams();
   const category = searchParams.get("category");
+  const { ref, inView } = useInView();
 
-  const { data: posts, isLoading } = useQuery({
+  const {
+    data: postsPages,
+    fetchNextPage,
+    hasNextPage,
+    isLoading,
+  } = useInfiniteQuery({
     queryKey: ["posts", resolvedParams.type],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       const response = await api.get("/v1/post/list", {
         params: {
           boardType: resolvedParams.type.toUpperCase(),
-          page: 0,
+          page: pageParam,
           size: 10,
+          sort: "writeDate,desc",
         },
       });
       return response.data;
     },
+    getNextPageParam: (lastPage) => {
+      if (lastPage.last) return undefined;
+      return lastPage.number + 1;
+    },
+    initialPageParam: 0,
   });
-  console.log(posts);
+
+  // 무한 스크롤 감지
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
 
   if (isLoading) {
     return (
@@ -89,14 +108,14 @@ export default function BoardPage({
               }
             </h1>
             <p className="text-sm text-slate-500">
-              총 {posts?.totalElements || 0}개의 게시글
+              총 {postsPages?.pages[0]?.totalElements || 0}개의 게시글
             </p>
           </div>
         </div>
       </nav>
 
       <main className="pt-20 pb-20 max-w-3xl mx-auto px-4">
-        {posts?.content?.length === 0 ? (
+        {postsPages?.pages[0]?.content.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-center">
             <div className="w-24 h-24 mb-8 bg-white rounded-full flex items-center justify-center shadow-md">
               <svg
@@ -146,35 +165,75 @@ export default function BoardPage({
           </div>
         ) : (
           <div className="grid gap-4">
-            {(posts?.content || []).map((post: Post, index) => (
-              <Link
-                key={`${post.writerId}-${post.writeDate}`}
-                // href={`/post/${post.postId}`}
-                href={`/post/35`}
-                className="block bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 border border-slate-100"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-900 font-medium">
-                    {post.writerName?.[0] || "익"}
-                  </div>
-                  <div>
-                    <span className="font-medium text-slate-900">
-                      {post.writerName || "익명"}
-                    </span>
-                    <div className="text-sm text-slate-400">
-                      {new Date(post.writeDate).toLocaleDateString()}
+            {postsPages?.pages.map((page, pageIndex) =>
+              page.content.map((post: Post, index) => (
+                <Link
+                  key={`${post.writerId}-${post.writeDate}`}
+                  href={`/post/${post.writerId}`}
+                  className="block bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 border border-slate-100
+                    animate-fade-in-up opacity-0"
+                  style={{
+                    animationDelay: `${
+                      (pageIndex * page.content.length + index) * 0.05
+                    }s`,
+                    animationFillMode: "forwards",
+                  }}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-900 font-medium">
+                      {post.writerName?.[0] || "익"}
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-900">
+                        {post.writerName || "익명"}
+                      </span>
+                      <div className="text-sm text-slate-400">
+                        {new Date(post.writeDate).toLocaleDateString()}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <h2 className="font-bold text-slate-900 mb-2 text-lg">
-                  {post.title}
-                </h2>
-                <p className="text-slate-600 mb-4 line-clamp-2">
-                  {post.content}
-                </p>
-                <div className="flex items-center justify-between text-sm text-slate-500">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1">
+                  <h2 className="font-bold text-slate-900 mb-2 text-lg">
+                    {post.title}
+                  </h2>
+                  <p className="text-slate-600 mb-4 line-clamp-2">
+                    {post.content}
+                  </p>
+                  <div className="flex items-center justify-between text-sm text-slate-500">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                          />
+                        </svg>
+                        {post.viewCount}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M12 21C17.5228 21 22 16.5228 22 12C22 7.47715 17.5228 3 12 3C6.47715 3 2 7.47715 2 12C2 13.8214 2.48697 15.5291 3.33782 17L2.5 21.5L7 20.6622C8.47087 21.513 10.1786 22 12 22"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                          />
+                        </svg>
+                        {post.likeCount}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <svg
                         width="16"
                         height="16"
@@ -183,58 +242,35 @@ export default function BoardPage({
                         xmlns="http://www.w3.org/2000/svg"
                       >
                         <path
-                          d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z"
+                          d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z"
                           stroke="currentColor"
                           strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         />
-                      </svg>
-                      {post.viewCount}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
                         <path
-                          d="M12 21C17.5228 21 22 16.5228 22 12C22 7.47715 17.5228 3 12 3C6.47715 3 2 7.47715 2 12C2 13.8214 2.48697 15.5291 3.33782 17L2.5 21.5L7 20.6622C8.47087 21.513 10.1786 22 12 22"
+                          d="M12 6V12L16 14"
                           stroke="currentColor"
                           strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         />
                       </svg>
-                      {post.likeCount}
-                    </span>
+                      {new Date(post.writeDate).toLocaleTimeString()}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M12 6V12L16 14"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    {new Date(post.writeDate).toLocaleTimeString()}
-                  </div>
+                </Link>
+              ))
+            )}
+
+            {/* 로딩 인디케이터 */}
+            <div ref={ref} className="py-4 text-center">
+              {hasNextPage && (
+                <div className="text-slate-500 text-sm animate-pulse">
+                  게시글 더 불러오는 중...
                 </div>
-              </Link>
-            ))}
+              )}
+            </div>
           </div>
         )}
       </main>
