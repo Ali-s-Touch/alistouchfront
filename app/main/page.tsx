@@ -218,7 +218,13 @@ export default function MainPage() {
       <nav className="bg-white shadow-sm fixed w-full top-0 z-50">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="로고" width={32} height={32} />
+            <Image
+              src="/logo.png"
+              alt="로고"
+              width={62}
+              height={62}
+              className="object-contain"
+            />
             <Link href="/main" className="text-xl font-bold text-slate-900">
               AliStory
             </Link>
