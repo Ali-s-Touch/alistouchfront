@@ -35,6 +35,7 @@ interface Post {
   boardType: string;
   viewCount: number;
   likeCount: number;
+  id: number;
 }
 
 export default function BoardPage({
@@ -60,7 +61,7 @@ export default function BoardPage({
           boardType: resolvedParams.type.toUpperCase(),
           page: pageParam,
           size: 10,
-          sort: "writeDate,desc",
+          sort: "createdDate",
         },
       });
       return response.data;
@@ -169,7 +170,7 @@ export default function BoardPage({
               page.content.map((post: Post, index) => (
                 <Link
                   key={`${post.writerId}-${post.writeDate}`}
-                  href={`/post/${post.writerId}`}
+                  href={`/post/${post.id}`}
                   className="block bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 border border-slate-100
                     animate-fade-in-up opacity-0"
                   style={{

@@ -84,11 +84,12 @@ export default function NewChatPage() {
       const response = await api.post(`/v1/chat-room/${chatRoomId}/post`, {
         sequenceIds: sequenceIds,
       });
+      console.log("게시글 생성 응답:", response.data);
       return response.data;
     },
     onSuccess: (data) => {
       console.log("게시글 생성 성공:", data);
-      router.push(`/post/${data.postId}`); // 생성된 게시글로 이동
+      router.push(`/post/${data.id}`); // 생성된 게시글로 이동
     },
     onError: (error) => {
       console.error("게시글 생성 실패:", error);

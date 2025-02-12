@@ -47,7 +47,7 @@ export default function SearchPage() {
           keyword: debouncedKeyword,
           page: pageParam,
           size: 10,
-          sort: "writeDate,desc",
+          sort: "createdDate",
         },
       });
       return response.data;

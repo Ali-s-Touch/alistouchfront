@@ -74,7 +74,7 @@ export default function PostDetailPage({
           postId: resolvedParams.id,
           page: pageParam,
           size: 10,
-          sort: "writeDate,desc",
+          sort: "createdDate",
         },
       });
       return response.data;
@@ -119,6 +119,7 @@ export default function PostDetailPage({
   const likeMutation = useMutation({
     mutationFn: async () => {
       const response = await api.post(`/v1/post/${resolvedParams.id}/like`);
+      console.log("좋아요 응답:", response.data);
       return response.data;
     },
     onMutate: async () => {
