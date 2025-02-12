@@ -459,12 +459,6 @@ export default function MainPage() {
               <h2 className="text-lg font-medium text-slate-900">
                 인기 게시판
               </h2>
-              <Link
-                href="/community"
-                className="text-sm text-slate-600 hover:text-blue-900"
-              >
-                전체보기 →
-              </Link>
             </div>
             <div className="space-y-4">
               {categories.map((item, index) => (
