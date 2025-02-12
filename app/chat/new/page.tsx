@@ -22,6 +22,7 @@ export default function NewChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [chatRoomId, setChatRoomId] = useState<string | null>(null);
+  const [messageCount, setMessageCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -55,12 +56,13 @@ export default function NewChatPage() {
     },
     onSuccess: (data) => {
       console.log("메시지 전송 성공:", data);
+      const assistantSequenceId = messageCount * 2;
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
           content: data.answer,
-          sequenceId: messages.length + 2,
+          sequenceId: assistantSequenceId,
         },
       ]);
     },
@@ -75,12 +77,13 @@ export default function NewChatPage() {
     mutationFn: async () => {
       if (!chatRoomId) throw new Error("채팅방이 없습니다");
 
-      // 메시지들의 sequenceId 배열 생성
+      // 모든 메시지의 sequenceId를 순서대로 포함
       const sequenceIds = messages
-        .filter((msg) => msg.sequenceId) // sequenceId가 있는 메시지만 필터링
-        .map((msg) => msg.sequenceId!); // sequenceId 배열로 변환
+        .filter((msg) => msg.sequenceId !== undefined) // undefined가 아닌 sequenceId만 필터링
+        .sort((a, b) => (a.sequenceId || 0) - (b.sequenceId || 0)) // sequenceId 순서대로 정렬
+        .map((msg) => msg.sequenceId!);
 
-      console.log("sequenceIds", sequenceIds);
+      console.log("게시글에 포함될 메시지 sequenceIds:", sequenceIds);
       const response = await api.post(`/v1/chat-room/${chatRoomId}/post`, {
         sequenceIds: sequenceIds,
       });
@@ -89,7 +92,7 @@ export default function NewChatPage() {
     },
     onSuccess: (data) => {
       console.log("게시글 생성 성공:", data);
-      router.push(`/post/${data.id}`); // 생성된 게시글로 이동
+      router.push(`/post/${data.id}`);
     },
     onError: (error) => {
       console.error("게시글 생성 실패:", error);
@@ -134,19 +137,19 @@ export default function NewChatPage() {
     if (!inputText.trim()) return;
 
     // 사용자 메시지를 먼저 화면에 표시
+    const userSequenceId = messageCount * 2 + 1;
     setMessages((prev) => [
       ...prev,
       {
         role: "user",
         content: inputText,
-        sequenceId: messages.length + 1, // 사용자 메시지의 sequenceId 추가
+        sequenceId: userSequenceId,
       },
     ]);
+    setMessageCount((prev) => prev + 1);
 
     // 메시지 전송
     sendMessage.mutate(inputText);
-
-    // 입력창 초기화
     setInputText("");
   };
 
