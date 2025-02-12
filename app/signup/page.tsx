@@ -12,20 +12,32 @@ import { useDispatch } from "react-redux";
 import { setToken } from "@/store/authSlice";
 
 const nationalityOptions = [
-  { value: "KOREA", label: "한국" },
-  { value: "VIETNAMESE", label: "베트남" },
-  { value: "FILIPINO", label: "필리핀" },
-  { value: "THAI", label: "태국" },
-  { value: "INDONESIAN", label: "인도네시아" },
+  { value: "KOREA", label: "대한민국" },
+  { value: "CHINA", label: "중국" },
+  { value: "VIETNAM", label: "베트남" },
+  { value: "THAILAND", label: "태국" },
+  { value: "PHILIPPINES", label: "필리핀" },
+  { value: "INDONESIA", label: "인도네시아" },
+  { value: "UZBEKISTAN", label: "우즈베키스탄" },
+  { value: "MONGOLIA", label: "몽골" },
+  { value: "CAMBODIA", label: "캄보디아" },
   { value: "MYANMAR", label: "미얀마" },
+  { value: "BANGLADESH", label: "방글라데시" },
+  { value: "ENGLISH_SPEAKING", label: "영어권 국가" },
 ] as const;
 
 const languageOptions = [
   { value: "KOREAN", label: "한국어" },
+  { value: "CHINESE", label: "中文" },
   { value: "VIETNAMESE", label: "Tiếng Việt" },
-  { value: "ENGLISH", label: "English" },
   { value: "THAI", label: "ภาษาไทย" },
+  { value: "ENGLISH", label: "English" },
   { value: "INDONESIAN", label: "Bahasa Indonesia" },
+  { value: "UZBEK", label: "O'zbek" },
+  { value: "MONGOLIAN", label: "Монгол" },
+  { value: "KHMER", label: "ភាសាខ្មែរ" },
+  { value: "BURMESE", label: "မြန်မာစာ" },
+  { value: "BENGALI", label: "বাংলা" },
 ] as const;
 
 export default function SignupPage() {
