@@ -239,7 +239,7 @@ export default function NewChatPage() {
                   } animate-message-in`}
                 >
                   <div
-                    className={`max-w-[80%] p-4 rounded-xl ${
+                    className={`max-w-[80%] p-4 rounded-xl whitespace-pre-line ${
                       message.role === "user"
                         ? "bg-blue-900 text-white"
                         : "bg-slate-100 text-slate-900"
