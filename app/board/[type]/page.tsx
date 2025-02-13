@@ -9,12 +9,12 @@ import { use, useEffect } from "react";
 import { useInView } from "react-intersection-observer";
 
 const BOARD_TYPES = {
-  EMPLOYMENT_PROCESS: "취업 절차",
-  LABOR_LAW_RIGHTS: "노동법/권리",
-  EMPLOYER_OBLIGATIONS: "사업주 의무",
-  IMMIGRATION_RESIDENCY: "체류/비자",
-  EMPLOYMENT_COMPLIANCE: "고용 규정",
-  DAILY_LIFE: "일상생활",
+  EMPLOYMENT_PROCESS: "정보 공유",
+  LABOR_LAW_RIGHTS: "임금 체불 상담",
+  EMPLOYER_OBLIGATIONS: "산업 재해",
+  IMMIGRATION_RESIDENCY: "체류 자격",
+  EMPLOYMENT_COMPLIANCE: "계약 관련",
+  DAILY_LIFE: "일상 이야기",
 } as const;
 
 interface ChatItem {

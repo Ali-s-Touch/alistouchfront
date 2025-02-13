@@ -26,6 +26,7 @@ interface Post {
   boardType: string;
   viewCount: number;
   likeCount: number;
+  id: number;
 }
 
 export default function SearchPage() {
@@ -65,7 +66,6 @@ export default function SearchPage() {
       fetchNextPage();
     }
   }, [inView, hasNextPage, fetchNextPage]);
-
   return (
     <div className="min-h-screen bg-slate-50">
       <nav className="bg-white shadow-sm fixed w-full top-0 z-50">
@@ -109,7 +109,7 @@ export default function SearchPage() {
               page.content.map((post: Post) => (
                 <Link
                   key={`${post.writerId}-${post.writeDate}`}
-                  href={`/post/${post.writerId}`}
+                  href={`/post/${post.id}`}
                   className="block bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 border border-slate-100"
                 >
                   {/* 게시글 카드 내용 - board/[type]/page.tsx와 동일 */}
